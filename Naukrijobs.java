@@ -1,168 +1,94 @@
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.io.*;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+public class Naukrijobs2 {
 
-public class Naukrijobs {
+	public static void main(String[] args) throws InterruptedException {
+		String userid = "swamymushini@gmail.com";
+		String password = "niNEWSS3**";
 
-    public static void main(String[] args) throws IOException, InterruptedException {
-        String email = "swamymushini@gmail.com";
-        String password = "niNEWSS3**";
-        String cookieFile = "naukri_cookies.data";
+		WebDriver driver = new ChromeDriver();
+		driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS);
+		driver.manage().window().maximize();
 
-        WebDriver driver = new ChromeDriver();
-        driver.manage().window().maximize();
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+		driver.get("https://www.naukri.com/"); // Ensure domain is loaded first
 
-        try {
-            File file = new File(cookieFile);
+		driver.findElement(By.id("login_Layer")).click();
 
-            // Reuse cookies if available
-            if (file.exists()) {
-                driver.get("https://www.naukri.com/");
-                try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
-                    @SuppressWarnings("unchecked")
-                    Set<Cookie> cookies = (Set<Cookie>) ois.readObject();
+		driver.findElement(By.xpath("//input[@placeholder='Enter your active Email ID / Username']")).sendKeys(userid);
+		driver.findElement(By.xpath("//input[@placeholder='Enter your password']")).sendKeys(password);
+		driver.findElement(By.cssSelector("button[type='submit']")).click();
+		driver.findElement(By.xpath("//span[text()='Jobs']")).click();
 
-                    for (Cookie cookie : cookies) {
-                        if ((cookie.getDomain().contains("naukri.com")) &&
-                                (cookie.getExpiry() == null || cookie.getExpiry().after(new Date()))) {
-                            try {
-                                driver.manage().addCookie(cookie);
-                            } catch (Exception e) {
-                                System.out.println("Skipping invalid cookie: " + cookie.getName());
-                            }
-                        }
-                    }
+		driver.findElement(By.cssSelector("a[class='view-all-link'] span")).click();
 
-                    driver.navigate().refresh();
-                    Thread.sleep(5000);
-                    if (driver.getPageSource().contains("My Naukri")) {
-                        System.out.println("Logged in using cookies.");
-                        driver.quit();
-                        return;
-                    }
-                } catch (Exception e) {
-                    System.out.println("Failed to load cookies, continuing with login...");
-                }
-            } else {
-                // Fresh login
-                driver.get("https://www.naukri.com/");
-                driver.findElement(By.id("login_Layer")).click();
+		int minExp = 3;
+		int maxExp = 6; 
+		Set<String> skillsSet = Set.of("Java", "Selenium", "Spring");
 
-                wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("input[type='text']")));
-                driver.findElement(By.cssSelector("input[type='text']")).sendKeys(email);
-                driver.findElement(By.cssSelector("input[type='password']")).sendKeys(password);
-                driver.findElement(By.cssSelector("button[type='submit']")).click();
+		try {
+			if (minExp <= 5 && maxExp >= 5 && skillsSet.contains("Java")) {
 
-                wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".view-profile-wrapper")));
+				// Find all checkboxes (update the locator as needed)
+				List<WebElement> checkboxes = driver
+						.findElements(By.xpath("(//i[@class='dspIB naukicon naukicon-ot-checkbox'])"));
+				WebDriverWait wait2 = new WebDriverWait(driver, Duration.ofSeconds(10));
+				wait2.until(ExpectedConditions
+						.visibilityOfElementLocated(By.xpath("(//i[@class='dspIB naukicon naukicon-ot-checkbox'])")));
 
-                // Save cookies
-                Set<Cookie> cookies = driver.manage().getCookies();
-                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(cookieFile))) {
-                    oos.writeObject(new HashSet<>(cookies));
-                }
-                System.out.println("Login successful and cookies saved.");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+				int selectedCount = 0;
 
-        // Navigate to job section and attempt to apply
-        driver.findElement(By.cssSelector("a[class='view-all-link'] span")).click();
-        WebDriverWait wait2 = new WebDriverWait(driver, Duration.ofSeconds(10));
-        wait2.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("(//i[@class='dspIB naukicon naukicon-ot-checkbox'])[1]")));
-        driver.findElement(By.xpath("(//i[@class='dspIB naukicon naukicon-ot-checkbox'])[1]")).click();
-        driver.findElement(By.cssSelector(".multi-apply-button.typ-16Bold")).click();
+				for (WebElement checkbox : checkboxes) {
+					if (selectedCount >= 5)
+						break;
 
-        // Handle chatbot questions using Gemini
-        Thread.sleep(5000);
-        WebElement chatbox = driver.findElement(By.cssSelector(".chatbot_Drawer.chatbot_right"));
-        wait2.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".chatbot_Drawer.chatbot_right")));
-        do {
-            if (chatbox.isDisplayed()) {
-                wait2.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".botMsg.msg")));
-                List<WebElement> questionLabels = driver.findElements(By.cssSelector(".botMsg.msg"));
-               
-                List<WebElement> answerInputs = driver.findElements(By.xpath("//div[@class='chatbot_InputContainer']"));
+					if (!checkbox.isSelected() && checkbox.isDisplayed()) {
+						checkbox.click();
+						selectedCount++;
+					}
+				}
 
-                if (questionLabels.size() == answerInputs.size() && questionLabels.size() > 0) {
-                    for (int i = 0; i < questionLabels.size(); i++) {
-                        String questionText = questionLabels.get(i).getText();
-                        String answer = getAnswerFromGemini(questionText);
+				// Click the apply button
+				WebElement applyBtn = driver.findElement(By.cssSelector(".multi-apply-button.typ-16Bold")); 
+				applyBtn.click();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-                        WebElement input = answerInputs.get(i);
-                        input.sendKeys(answer);
-                        driver.findElement(By.cssSelector(".sendMsg")).click();
+		while (true) {
+			try {
+				WebElement chatbox = driver.findElement(By.cssSelector(".chatbot_Drawer.chatbot_right")); 
+																											
+				if (chatbox.isDisplayed()) {
+					System.out.println("Chatbox is displayed");
 
-                        System.out.println("Q: " + questionText);
-                        System.out.println("A: " + answer);
-                    }
-                }
-            } else {
-                System.out.println("Chatbox is not displayed");
-                break; // Exit the loop if chatbox is not visible
-            }
+					WebElement textbox = driver.findElement(By.xpath("//div[@class='textArea']")); 
+																									
+					WebElement sendButton = driver.findElement(By.xpath("//div[@class='sendMsg']"));
 
-            // Optionally add a wait here to prevent rapid loop execution
-            Thread.sleep(1000);
+					if (textbox.isDisplayed() && sendButton.isDisplayed()) {
+						textbox.sendKeys("Gopal");
+						sendButton.click();
+					}
 
-        } while (chatbox.isDisplayed());
+					Thread.sleep(2000); // Wait to avoid rapid sending
+				} else {
+					break; // Exit if chatbox is not displayed
+				}
+			} catch (NoSuchElementException e) {
+				System.out.println("Chatbox not found, exiting loop.");
+				break;
+			}
+		}
 
-        driver.quit();
-    }
-
-    public static String getAnswerFromGemini(String userInput) throws IOException, InterruptedException {
-        String apiKey = "YOUR_API_KEY_HERE";
-        String modelId = "gemini-2.0-flash";
-        String apiUrl = String.format(
-                "https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?key=%s",
-                modelId, apiKey
-        );
-
-        String requestBody = """
-        {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [
-                        {
-                            "text": "%s"
-                        }
-                    ]
-                }
-            ]
-        }
-        """.formatted(userInput);
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
-
-        HttpClient client = HttpClient.newHttpClient();
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        String responseBody = response.body();
-        Pattern pattern = Pattern.compile("\"text\"\\s*:\\s*\"(.*?)\"", Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(responseBody);
-
-        StringBuilder result = new StringBuilder();
-        while (matcher.find()) {
-            result.append(matcher.group(1));
-        }
-
-        return result.toString();
-    }
+	}
 }
